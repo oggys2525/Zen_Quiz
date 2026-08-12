@@ -56,6 +56,23 @@ Chinese_Web_app/
    npm run dev
    ```
 
+## Deployment & Hosting Instructions
+
+When hosting the app online (e.g., Render, Vercel, Netlify):
+
+1. **Backend Service**:
+   - Host the `backend` folder on a service like Render (Python Web Service), Railway, or Fly.io.
+   - Environment variables needed on backend:
+     - `SECRET_KEY`: Random secret key for JWT authentication.
+     - `CORS_ORIGINS`: Set to `*` or your frontend site URL (e.g. `https://zen-quiz-frontend.onrender.com`).
+     - `DATABASE_URL`: `sqlite:///./zen_quiz.db` or PostgreSQL connection string.
+
+2. **Frontend Static Site**:
+   - Host the `frontend` folder on Render (Static Site), Vercel, Netlify, or Cloudflare Pages.
+   - Set the build environment variable:
+     - `VITE_API_URL`: Your deployed backend URL (e.g., `https://zen-quiz-backend.onrender.com`).
+   - If hosting both on Render using `render.yaml`, the included route rewrite automatically proxies `/api/*` requests to the backend service.
+
 ## License
 
 MIT

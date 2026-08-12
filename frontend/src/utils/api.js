@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+// Dynamic API base URL: supports VITE_API_URL for production hosted backends, falling back to relative '/api'
+const ENV_API_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
+const API_BASE = ENV_API_URL ? `${ENV_API_URL}/api` : '/api';
 
 export function getAuthToken() {
   return localStorage.getItem('zen_token');
@@ -43,11 +45,23 @@ export async function apiRequest(endpoint, method = 'GET', data = null) {
     options.body = JSON.stringify(data);
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, options);
-  const json = await res.json().catch(() => ({}));
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${endpoint}`, options);
+  } catch (netErr) {
+    throw new Error('Network error: Unable to connect to backend server. Please check host configuration.');
+  }
+
+  let json = {};
+  try {
+    json = await res.json();
+  } catch (e) {
+    // Response was not JSON (e.g. 404 HTML page from static server)
+  }
 
   if (!res.ok) {
-    throw new Error(json.detail || 'API Request failed');
+    const errorMsg = json.detail || json.message || `Server error (${res.status}: ${res.statusText})`;
+    throw new Error(errorMsg);
   }
 
   return json;
@@ -65,6 +79,16 @@ export function speakChinese(text) {
 
 // WebSocket URL helper
 export function getWebSocketUrl(path = '/ws/game') {
+  if (ENV_API_URL) {
+    try {
+      const url = new URL(ENV_API_URL);
+      const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${wsProtocol}//${url.host}${path}`;
+    } catch (e) {
+      console.error('Invalid VITE_API_URL format:', e);
+    }
+  }
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const hostname = window.location.hostname || '127.0.0.1';
   const port = window.location.port;

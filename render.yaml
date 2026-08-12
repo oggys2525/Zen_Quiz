@@ -27,7 +27,13 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://zen-quiz-backend.onrender.com
     routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://zen-quiz-backend.onrender.com/api/*
       - type: rewrite
         source: /*
         destination: /index.html
