@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+venv/
+backend/venv/
+.venv/
+
+# Environment variables
+.env
+backend/.env
+*.env
+
+# Build outputs
+dist/
+frontend/dist/
+build/
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+zen_quiz.db
+backend/zen_quiz.db
+
+# Logs & OS metadata
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo

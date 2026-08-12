@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Outfit', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+    background-color: #090d16;
+    color: #f8fafc;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Asian & Zenith Design Theme Utilities */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(244, 63, 94, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -10px rgba(244, 63, 94, 0.2);
+}
+
+.glow-red {
+  box-shadow: 0 0 25px rgba(225, 29, 72, 0.35);
+}
+
+.glow-gold {
+  box-shadow: 0 0 25px rgba(234, 179, 8, 0.35);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
+}
+
+/* Dynamic Keyframe Animations */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.03); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pop-in {
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes flashGreen {
+  0% { background-color: rgba(16, 185, 129, 0.3); border-color: #10b981; }
+  100% { background-color: rgba(16, 185, 129, 0.1); border-color: #10b981; }
+}
+
+@keyframes flashRed {
+  0% { background-color: rgba(239, 68, 68, 0.3); border-color: #ef4444; }
+  100% { background-color: rgba(239, 68, 68, 0.1); border-color: #ef4444; }
+}
+
+.flash-correct {
+  animation: flashGreen 0.6s ease-out forwards;
+}
+
+.flash-incorrect {
+  animation: flashRed 0.6s ease-out forwards;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(244, 63, 94, 0.4);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(244, 63, 94, 0.7);
+}
