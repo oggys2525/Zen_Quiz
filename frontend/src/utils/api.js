@@ -1,6 +1,40 @@
-// Dynamic API base URL: supports VITE_API_URL for production hosted backends, falling back to relative '/api'
-const ENV_API_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
-const API_BASE = ENV_API_URL ? `${ENV_API_URL}/api` : '/api';
+// Default backend service URL when deployed on production hosting without custom VITE_API_URL
+const DEFAULT_PROD_BACKEND = 'https://zen-quiz-backend.onrender.com';
+
+export function getCustomBackendUrl() {
+  return localStorage.getItem('zen_custom_backend_url') || '';
+}
+
+export function setCustomBackendUrl(url) {
+  if (url && url.trim()) {
+    localStorage.setItem('zen_custom_backend_url', url.trim().replace(/\/$/, ''));
+  } else {
+    localStorage.removeItem('zen_custom_backend_url');
+  }
+}
+
+export function getApiBaseUrl() {
+  // 1. Custom user override from settings/localStorage
+  const customUrl = getCustomBackendUrl();
+  if (customUrl) {
+    return customUrl.endsWith('/api') ? customUrl : `${customUrl}/api`;
+  }
+
+  // 2. Build-time environment variable VITE_API_URL
+  if (import.meta.env.VITE_API_URL) {
+    const envUrl = import.meta.env.VITE_API_URL.replace(/\/$/, '');
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+
+  // 3. Localhost / Dev environment
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return '/api';
+  }
+
+  // 4. Default hosted production backend fallback
+  return `${DEFAULT_PROD_BACKEND}/api`;
+}
 
 export function getAuthToken() {
   return localStorage.getItem('zen_token');
@@ -45,11 +79,13 @@ export async function apiRequest(endpoint, method = 'GET', data = null) {
     options.body = JSON.stringify(data);
   }
 
+  const apiBase = getApiBaseUrl();
+
   let res;
   try {
-    res = await fetch(`${API_BASE}${endpoint}`, options);
+    res = await fetch(`${apiBase}${endpoint}`, options);
   } catch (netErr) {
-    throw new Error('Network error: Unable to connect to backend server. Please check host configuration.');
+    throw new Error(`Network Error: Failed to reach backend at ${apiBase}. Please verify backend server is online.`);
   }
 
   let json = {};
@@ -60,7 +96,7 @@ export async function apiRequest(endpoint, method = 'GET', data = null) {
   }
 
   if (!res.ok) {
-    const errorMsg = json.detail || json.message || `Server error (${res.status}: ${res.statusText})`;
+    const errorMsg = json.detail || json.message || `Backend Server Error (${res.status}${res.statusText ? ': ' + res.statusText : ''}) at ${apiBase}${endpoint}`;
     throw new Error(errorMsg);
   }
 
@@ -79,13 +115,15 @@ export function speakChinese(text) {
 
 // WebSocket URL helper
 export function getWebSocketUrl(path = '/ws/game') {
-  if (ENV_API_URL) {
+  const apiBase = getApiBaseUrl();
+
+  if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
     try {
-      const url = new URL(ENV_API_URL);
+      const url = new URL(apiBase);
       const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
       return `${wsProtocol}//${url.host}${path}`;
     } catch (e) {
-      console.error('Invalid VITE_API_URL format:', e);
+      console.error('Invalid API URL for WebSocket:', e);
     }
   }
 
