@@ -61,7 +61,7 @@ export function setUser(user) {
   }
 }
 
-export async function apiRequest(endpoint, method = 'GET', data = null) {
+export async function apiRequest(endpoint, method = 'GET', data = null, retries = 2) {
   const headers = {
     'Content-Type': 'application/json',
   };
@@ -82,10 +82,24 @@ export async function apiRequest(endpoint, method = 'GET', data = null) {
   const apiBase = getApiBaseUrl();
 
   let res;
-  try {
-    res = await fetch(`${apiBase}${endpoint}`, options);
-  } catch (netErr) {
-    throw new Error(`Network Error: Failed to reach backend at ${apiBase}. Please verify backend server is online.`);
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      res = await fetch(`${apiBase}${endpoint}`, options);
+      lastError = null;
+      break;
+    } catch (netErr) {
+      lastError = netErr;
+      if (attempt < retries) {
+        // Wait 2.5 seconds before retrying (gives Render free tier backend time to wake up)
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+    }
+  }
+
+  if (lastError || !res) {
+    throw new Error(`Network Error: Unable to reach backend server at ${apiBase}. If using Render free hosting, please wait ~30 seconds for the backend to wake up.`);
   }
 
   let json = {};
