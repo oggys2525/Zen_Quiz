@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { Plus, Trash2, ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Volume2, HelpCircle, Edit3, ChevronDown, ChevronUp, Layers, X, Upload, Image as ImageIcon, Link2, XCircle } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Volume2, HelpCircle, Edit3, ChevronDown, ChevronUp, Layers, X, Upload, Image as ImageIcon, Link2, XCircle, User } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 
 const handleDeviceFileUpload = (file, onComplete) => {
@@ -44,7 +44,19 @@ export default function CreateQuiz() {
   const [collapsed, setCollapsed] = useState({});
   const [showAddTypeModal, setShowAddTypeModal] = useState(false);
 
+  // Default first question asks for user/student name with 0 points (no points)
   const [questions, setQuestions] = useState([
+    {
+      question_type: 'student_name',
+      prompt: 'Please enter your name / 请输入你的名字',
+      pinyin: 'Qǐng shūrù nǐ de míngzì',
+      correct_answer: 'Any name accepted',
+      options: ['Student Name'],
+      image_url: '',
+      no_points: true,
+      points: 0,
+      time_limit: 20,
+    },
     {
       question_type: 'multiple_choice',
       prompt: '你好',
@@ -52,6 +64,7 @@ export default function CreateQuiz() {
       correct_answer: 'Hello',
       options: ['Hello', 'Goodbye', 'Thank you', 'Sorry'],
       image_url: '',
+      no_points: false,
     },
     {
       question_type: 'fill_in_blank',
@@ -60,6 +73,7 @@ export default function CreateQuiz() {
       correct_answer: '中国',
       options: ['中国', '美国', '英国', '法国'],
       image_url: '',
+      no_points: false,
     },
     {
       question_type: 'image_choice',
@@ -68,6 +82,7 @@ export default function CreateQuiz() {
       correct_answer: '猫 (Cat)',
       options: ['猫 (Cat)', '狗 (Dog)', '鸟 (Bird)', '鱼 (Fish)'],
       image_url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80',
+      no_points: false,
     },
   ]);
 
@@ -83,15 +98,21 @@ export default function CreateQuiz() {
           setDefaultTimeLimit(quiz.default_time_limit ?? 15);
           if (quiz.questions && quiz.questions.length > 0) {
             setQuestions(
-              quiz.questions.map((q) => ({
-                question_type: q.meta_info?.question_type || 'multiple_choice',
-                image_url: q.meta_info?.image_url || '',
-                prompt: q.prompt || '',
-                pinyin: q.pinyin || '',
-                correct_answer: q.correct_answer || '',
-                options: q.options || ['', '', '', ''],
-                time_limit: q.time_limit ?? (q.meta_info?.time_limit ?? null),
-              }))
+              quiz.questions.map((q) => {
+                const qType = q.meta_info?.question_type || 'multiple_choice';
+                const isNameQ = qType === 'student_name' || Boolean(q.meta_info?.no_points) || Boolean(q.meta_info?.is_name_question);
+                return {
+                  question_type: qType,
+                  image_url: q.meta_info?.image_url || '',
+                  prompt: q.prompt || '',
+                  pinyin: q.pinyin || '',
+                  correct_answer: q.correct_answer || '',
+                  options: q.options || ['', '', '', ''],
+                  time_limit: q.time_limit ?? (q.meta_info?.time_limit ?? null),
+                  no_points: isNameQ,
+                  points: isNameQ ? 0 : (q.meta_info?.points ?? null),
+                };
+              })
             );
           }
         } catch (err) {
@@ -125,14 +146,18 @@ export default function CreateQuiz() {
 
   const handleAddQuestionWithType = (type) => {
     const newIndex = questions.length;
+    const isNameQ = type === 'student_name';
     const newQ = {
       question_type: type,
-      prompt: '',
-      pinyin: '',
-      correct_answer: '',
-      options: ['', '', '', ''],
+      prompt: isNameQ ? 'Please enter your name / 请输入你的名字' : '',
+      pinyin: isNameQ ? 'Qǐng shūrù nǐ de míngzì' : '',
+      correct_answer: isNameQ ? 'Any name accepted' : '',
+      options: isNameQ ? ['Student Name'] : ['', '', '', ''],
       option_images: ['', '', '', ''],
       image_url: '',
+      no_points: isNameQ,
+      points: isNameQ ? 0 : null,
+      time_limit: isNameQ ? 20 : null,
     };
 
     setQuestions([...questions, newQ]);
@@ -162,6 +187,13 @@ export default function CreateQuiz() {
     updated[index].question_type = type;
     if (type === 'fill_in_blank' && !updated[index].correct_answer) {
       updated[index].correct_answer = updated[index].prompt || '';
+    } else if (type === 'student_name') {
+      if (!updated[index].prompt) updated[index].prompt = 'Please enter your name / 请输入你的名字';
+      if (!updated[index].pinyin) updated[index].pinyin = 'Qǐng shūrù nǐ de míngzì';
+      updated[index].correct_answer = 'Any name accepted';
+      updated[index].options = ['Student Name'];
+      updated[index].no_points = true;
+      updated[index].points = 0;
     }
     setQuestions(updated);
   };
@@ -201,17 +233,20 @@ export default function CreateQuiz() {
 
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i];
+      const isNameQ = q.question_type === 'student_name' || Boolean(q.no_points);
+
       if (!q.prompt.trim()) {
         setError(`Question #${i + 1} is missing a prompt.`);
         setCollapsed((prev) => ({ ...prev, [i]: false }));
         return;
       }
-      if (!q.correct_answer.trim()) {
+      if (!isNameQ && !q.correct_answer.trim()) {
         setError(`Question #${i + 1} needs a correct answer.`);
         setCollapsed((prev) => ({ ...prev, [i]: false }));
         return;
       }
       if (
+        !isNameQ &&
         q.question_type !== 'fill_in_blank' &&
         q.options.some((opt, idx) => !opt.trim() && !q.option_images?.[idx])
       ) {
@@ -225,15 +260,16 @@ export default function CreateQuiz() {
     try {
       const formattedQuestions = questions.map((q) => {
         const qType = q.question_type || 'multiple_choice';
+        const isNameQuestion = qType === 'student_name' || Boolean(q.no_points);
         const finalOptions =
-          qType === 'fill_in_blank'
-            ? [q.correct_answer, '', '', '']
+          qType === 'fill_in_blank' || qType === 'student_name'
+            ? [q.correct_answer || 'Any name accepted', '', '', '']
             : q.options.map((opt, idx) => (opt.trim() ? opt : q.option_images?.[idx] || 'Option'));
 
         return {
           prompt: q.prompt,
           pinyin: q.pinyin || null,
-          correct_answer: q.correct_answer,
+          correct_answer: isNameQuestion ? (q.correct_answer || 'Any name accepted') : q.correct_answer,
           options: finalOptions,
           time_limit: q.time_limit,
           meta_info: {
@@ -241,6 +277,9 @@ export default function CreateQuiz() {
             image_url: q.image_url || null,
             option_images: q.option_images || [],
             time_limit: q.time_limit,
+            no_points: isNameQuestion,
+            points: isNameQuestion ? 0 : (q.points ?? null),
+            is_name_question: isNameQuestion,
           },
         };
       });
@@ -448,6 +487,7 @@ export default function CreateQuiz() {
             {questions.map((q, qIndex) => {
               const isCollapsed = Boolean(collapsed[qIndex]);
               const qType = q.question_type || 'multiple_choice';
+              const isNameQ = qType === 'student_name' || Boolean(q.no_points);
               const timerLabel =
                 q.time_limit === undefined || q.time_limit === null
                   ? `Default (${defaultTimeLimit > 0 ? `${defaultTimeLimit}s` : 'Untimed'})`
@@ -456,9 +496,10 @@ export default function CreateQuiz() {
                   : `${q.time_limit}s`;
 
               let typeBadgeLabel = '🔘 Choice';
-              if (qType === 'fill_in_blank') typeBadgeLabel = '✍️ Fill';
-              if (qType === 'image_choice') typeBadgeLabel = '🖼️ Picture';
-              if (qType === 'sentence_order') typeBadgeLabel = '🧩 Sentence';
+              if (qType === 'student_name') typeBadgeLabel = '👤 Name (0 pts)';
+              else if (qType === 'fill_in_blank') typeBadgeLabel = '✍️ Fill';
+              else if (qType === 'image_choice') typeBadgeLabel = '🖼️ Picture';
+              else if (qType === 'sentence_order') typeBadgeLabel = '🧩 Sentence';
 
               return (
                 <div
@@ -494,22 +535,36 @@ export default function CreateQuiz() {
                               [{q.pinyin}]
                             </span>
                           )}
-                          {q.correct_answer && (
+                          {isNameQ ? (
+                            <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold truncate hidden md:inline">
+                              0 pts (Name Check)
+                            </span>
+                          ) : q.correct_answer ? (
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold truncate hidden md:inline">
                               ✓ {q.correct_answer}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
                             Question #{qIndex + 1} Setup
                           </span>
+                          {isNameQ && (
+                            <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-black">
+                              0 Points (No Points)
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      {isNameQ && (
+                        <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/40 text-[10px] font-extrabold text-indigo-300">
+                          0 Pts
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-[10px] font-bold text-slate-400">
                         ⏱️ {timerLabel}
                       </span>
@@ -634,7 +689,9 @@ export default function CreateQuiz() {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-xs font-semibold text-slate-400 mb-1">
-                            {qType === 'fill_in_blank'
+                            {qType === 'student_name'
+                              ? 'Question Prompt (e.g. Please enter your name) *'
+                              : qType === 'fill_in_blank'
                               ? 'Prompt with Blank (e.g. 我是 ___ 人) *'
                               : qType === 'image_choice'
                               ? 'Picture Question Prompt *'
@@ -645,7 +702,7 @@ export default function CreateQuiz() {
                             required
                             value={q.prompt}
                             onChange={(e) => handleQuestionChange(qIndex, 'prompt', e.target.value)}
-                            placeholder="e.g. 猫"
+                            placeholder={qType === 'student_name' ? 'e.g. Please enter your name / 请输入你的名字' : 'e.g. 猫'}
                             className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-rose-500"
                           />
                         </div>
@@ -658,7 +715,7 @@ export default function CreateQuiz() {
                             type="text"
                             value={q.pinyin || ''}
                             onChange={(e) => handleQuestionChange(qIndex, 'pinyin', e.target.value)}
-                            placeholder="e.g. māo"
+                            placeholder={qType === 'student_name' ? 'e.g. Qǐng shūrù nǐ de míngzì' : 'e.g. māo'}
                             className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-amber-400 placeholder-slate-600 focus:border-rose-500"
                           />
                         </div>
@@ -711,8 +768,36 @@ export default function CreateQuiz() {
                         </div>
                       </div>
 
-                      {/* Options or Fill In Answer Input */}
-                      {qType === 'fill_in_blank' ? (
+                      {/* Options or Fill In Answer Input or Student Name Banner */}
+                      {qType === 'student_name' ? (
+                        <div className="bg-indigo-950/20 border border-indigo-800/40 p-4 rounded-2xl space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-indigo-300 font-extrabold text-xs uppercase tracking-wider">
+                              <User className="w-4 h-4 text-indigo-400" />
+                              <span>Student Name Question (0 Points • Attendance Check)</span>
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-black">
+                              NO POINTS (0 PTS)
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            Students will see a prompt to submit their name or nickname. Any name entered is automatically accepted, and <strong>no points (0 pts)</strong> are awarded so it doesn't affect their quiz ranking.
+                          </p>
+
+                          <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                            <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-bold flex items-center gap-1">
+                              ✓ 0 Points Awarded
+                            </span>
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold flex items-center gap-1">
+                              ✓ All Names Accepted
+                            </span>
+                            <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold flex items-center gap-1">
+                              ✓ Updates Student Display Name
+                            </span>
+                          </div>
+                        </div>
+                      ) : qType === 'fill_in_blank' ? (
                         <div className="bg-emerald-950/20 border border-emerald-800/40 p-4 rounded-xl">
                           <label className="block text-xs font-bold text-emerald-400 mb-1">
                             Exact Type-In Answer Expected *
@@ -871,6 +956,23 @@ export default function CreateQuiz() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Student Name Card (0 Points) */}
+              <div
+                onClick={() => handleAddQuestionWithType('student_name')}
+                className="p-5 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-900/60 border border-slate-800 hover:border-indigo-500/80 hover:bg-indigo-950/20 cursor-pointer transition-all group shadow-lg"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center text-xl font-bold mb-3 group-hover:scale-110 transition-transform">
+                  👤
+                </div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-extrabold text-white group-hover:text-indigo-400 transition-colors">Student Name</h4>
+                  <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-black border border-indigo-500/30">
+                    0 PTS
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">Prompt for student name submission with no points awarded.</p>
+              </div>
+
               {/* Multiple Choice Card */}
               <div
                 onClick={() => handleAddQuestionWithType('multiple_choice')}

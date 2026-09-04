@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Volume2, Eye, EyeOff, Sparkles, Headphones } from 'lucide-react';
+import { Volume2, Eye, EyeOff, Sparkles, Headphones, User } from 'lucide-react';
 import { speakChinese } from '../utils/api';
 
 export default function ChineseCard({ prompt, pinyin, gameMode, imageUrl, questionType, showPinyinToggle = true }) {
@@ -15,6 +15,9 @@ export default function ChineseCard({ prompt, pinyin, gameMode, imageUrl, questi
   };
 
   const getModeBadge = () => {
+    if (questionType === 'student_name' || questionType === 'name_input') {
+      return { label: 'Student Name (0 Points)', icon: User, bg: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' };
+    }
     if (questionType === 'image_choice' || imageUrl) {
       return { label: 'Picture Match Quiz', icon: Sparkles, bg: 'bg-purple-500/10 text-purple-400 border-purple-500/30' };
     }

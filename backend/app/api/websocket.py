@@ -175,6 +175,12 @@ async def advance_to_next_question(room: Room):
 
         q_type = meta_info.get("question_type", "multiple_choice")
         image_url = q.get("image_url") or meta_info.get("image_url") or None
+        is_name_question = (
+            q_type in ["student_name", "name_input"] or
+            bool(meta_info.get("is_name_question")) or
+            bool(meta_info.get("no_points")) or
+            bool(q.get("no_points"))
+        )
 
         payload = {
             "event": "QUESTION_START",
@@ -188,7 +194,9 @@ async def advance_to_next_question(room: Room):
             "progression_mode": room.progression_mode,
             "meta_info": meta_info,
             "question_type": q_type,
-            "image_url": image_url
+            "image_url": image_url,
+            "is_name_question": is_name_question,
+            "no_points": is_name_question or bool(meta_info.get("no_points"))
         }
         await broadcast_to_room(room, payload)
 
@@ -215,15 +223,36 @@ async def handle_time_expired(room: Room):
     current_q = questions[room.current_question_index] if room.current_question_index < len(questions) else {}
     is_last = (room.current_question_index >= len(questions) - 1)
 
+    current_meta = current_q.get("meta_info") or {}
+    if isinstance(current_meta, str):
+        try:
+            current_meta = json.loads(current_meta)
+        except Exception:
+            current_meta = {}
+    elif not isinstance(current_meta, dict):
+        current_meta = {}
+
+    is_name_q = (
+        current_meta.get("question_type") in ["student_name", "name_input"] or
+        bool(current_meta.get("is_name_question")) or
+        bool(current_meta.get("no_points")) or
+        bool(current_q.get("no_points"))
+    )
+
+    correct_display = "Student Names Submitted" if is_name_q else current_q.get("correct_answer")
+    submitted_names = [p["name"] for p in room.players.values() if p.get("last_answer")] if is_name_q else []
+
     # Broadcast question result
     await broadcast_to_room(room, {
         "event": "SHOW_ANSWER",
         "question_index": room.current_question_index,
-        "correct_answer": current_q.get("correct_answer"),
+        "correct_answer": correct_display,
         "leaderboard": room.get_leaderboard(),
         "is_last_question": is_last,
         "progression_mode": room.progression_mode,
-        "auto_advance_delay": room.auto_advance_delay if room.progression_mode == "auto" and not is_last else 0
+        "auto_advance_delay": room.auto_advance_delay if room.progression_mode == "auto" and not is_last else 0,
+        "is_name_question": is_name_q,
+        "submitted_names": submitted_names
     })
 
     # If progression_mode is auto and not last question, launch auto-advance timer
@@ -429,20 +458,43 @@ async def websocket_game_endpoint(websocket: WebSocket, room_code: Optional[str]
 
                 correct_str = str(current_q.get("correct_answer", "")).strip()
 
-                # Case-insensitive normalized matching
-                norm_selected = selected_answer.lower()
-                norm_correct = correct_str.lower()
+                meta_info = current_q.get("meta_info") or {}
+                if isinstance(meta_info, str):
+                    try:
+                        meta_info = json.loads(meta_info)
+                    except Exception:
+                        meta_info = {}
+                elif not isinstance(meta_info, dict):
+                    meta_info = {}
 
-                is_correct = (norm_selected == norm_correct)
+                q_type = meta_info.get("question_type", "multiple_choice")
+                is_name_q = (
+                    q_type in ["student_name", "name_input"] or
+                    bool(meta_info.get("is_name_question")) or
+                    bool(meta_info.get("no_points")) or
+                    bool(current_q.get("no_points"))
+                )
 
                 points = 0
-                if is_correct:
-                    player["streak"] += 1
-                    time_bonus = int((room.time_remaining / max(room.time_limit, 1)) * 500)
-                    points = 500 + time_bonus
-                    player["score"] += points
+                if is_name_q:
+                    # Name submission question: Any entered name is accepted and awards 0 points
+                    is_correct = True
+                    points = 0
+                    if selected_answer:
+                        player["name"] = selected_answer
                 else:
-                    player["streak"] = 0
+                    # Case-insensitive normalized matching
+                    norm_selected = selected_answer.lower()
+                    norm_correct = correct_str.lower()
+                    is_correct = (norm_selected == norm_correct)
+
+                    if is_correct:
+                        player["streak"] += 1
+                        time_bonus = int((room.time_remaining / max(room.time_limit, 1)) * 500)
+                        points = 500 + time_bonus
+                        player["score"] += points
+                    else:
+                        player["streak"] = 0
 
                 player["has_answered"] = True
                 player["last_is_correct"] = is_correct
@@ -453,10 +505,11 @@ async def websocket_game_endpoint(websocket: WebSocket, room_code: Optional[str]
                 await send_json_safe(websocket, {
                     "event": "ANSWER_FEEDBACK",
                     "is_correct": is_correct,
-                    "correct_answer": correct_str,
+                    "correct_answer": "Name Submitted" if is_name_q else correct_str,
                     "points_gained": points,
                     "new_score": player["score"],
-                    "streak": player["streak"]
+                    "streak": player["streak"],
+                    "is_name_question": is_name_q
                 })
 
                 # Notify Host of student submission progress

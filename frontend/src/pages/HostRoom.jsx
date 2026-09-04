@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Play, SkipForward, Trophy, Sparkles, Volume2, Clock, CheckCircle, Award, AlertCircle, Zap, Sliders, UserCheck } from 'lucide-react';
+import { Users, Play, SkipForward, Trophy, Sparkles, Volume2, Clock, CheckCircle, Award, AlertCircle, Zap, Sliders, UserCheck, User } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import TimerBar from '../components/TimerBar';
 import ChineseCard from '../components/ChineseCard';
@@ -32,6 +32,7 @@ export default function HostRoom() {
 
   const [answeredCount, setAnsweredCount] = useState(0);
   const [correctAnswer, setCorrectAnswer] = useState('');
+  const [submittedNames, setSubmittedNames] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [podium, setPodium] = useState([]);
 
@@ -91,15 +92,27 @@ export default function HostRoom() {
             setGameState('QUESTION');
             setQuestionIndex(data.question_index);
             setTotalQuestions(data.total_questions);
+            const isNameQ = Boolean(
+              data.is_name_question ||
+              data.question_type === 'student_name' ||
+              data.meta_info?.question_type === 'student_name' ||
+              data.no_points
+            );
             setCurrentQuestion({
               prompt: data.prompt,
               pinyin: data.pinyin,
-              options: data.options,
+              options: data.options || [],
               game_mode: data.game_mode,
+              question_type: data.question_type,
+              meta_info: data.meta_info,
+              image_url: data.image_url,
+              is_name_question: isNameQ,
+              no_points: isNameQ,
             });
             setTimeRemaining(data.time_limit);
             setTotalTime(data.time_limit);
             setAnsweredCount(0);
+            setSubmittedNames([]);
             setAutoNextSeconds(null);
             break;
 
@@ -117,6 +130,7 @@ export default function HostRoom() {
             setGameState('SHOW_ANSWER');
             setCorrectAnswer(data.correct_answer);
             setLeaderboard(data.leaderboard || []);
+            setSubmittedNames(data.submitted_names || []);
             break;
 
           case 'AUTO_NEXT_TICK':
@@ -469,6 +483,12 @@ export default function HostRoom() {
               }`}>
                 {progressionMode === 'auto' ? '⚡ Auto Next' : '🎓 Teacher Next'}
               </span>
+              {currentQuestion.is_name_question && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
+                  <User className="w-3 h-3" />
+                  <span>0 Pts Name Check</span>
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
@@ -501,17 +521,36 @@ export default function HostRoom() {
             questionType={currentQuestion.question_type || currentQuestion.meta_info?.question_type}
           />
 
-          {/* Choices Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
-            {currentQuestion.options.map((option, idx) => (
-              <div
-                key={idx}
-                className="glass-card p-4 rounded-2xl border border-slate-700 text-center font-bold text-lg text-slate-200"
-              >
-                {option}
+          {/* Choices Grid or Student Name Check overview */}
+          {currentQuestion.is_name_question ? (
+            <div className="max-w-xl mx-auto bg-indigo-950/30 border border-indigo-500/40 p-6 rounded-2xl text-center space-y-3 shadow-xl">
+              <div className="flex items-center justify-center gap-2 text-indigo-300 font-extrabold text-sm uppercase tracking-wider">
+                <User className="w-4 h-4 text-indigo-400" />
+                <span>Students Submitting Names</span>
+                <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black border border-indigo-500/30">
+                  0 PTS
+                </span>
               </div>
-            ))}
-          </div>
+              <p className="text-xs text-slate-300">
+                Students are submitting their names on their devices. Any submitted name is accepted with 0 points awarded.
+              </p>
+              <div className="pt-2 flex items-center justify-center gap-2 text-sm font-bold text-emerald-400">
+                <CheckCircle className="w-4 h-4" />
+                <span>{answeredCount} of {players.length} Students Submitted</span>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl mx-auto">
+              {currentQuestion.options.map((option, idx) => (
+                <div
+                  key={idx}
+                  className="glass-card p-4 rounded-2xl border border-slate-700 text-center font-bold text-lg text-slate-200"
+                >
+                  {option}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -519,11 +558,39 @@ export default function HostRoom() {
       {gameState === 'SHOW_ANSWER' && (
         <div className="space-y-8">
           <div className="glass-panel rounded-3xl p-8 border border-slate-800 text-center">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Question Answer</h2>
-            <div className="text-3xl sm:text-5xl font-black text-emerald-400 mb-4 flex items-center justify-center gap-3">
-              <CheckCircle className="w-10 h-10" />
-              <span>{correctAnswer}</span>
-            </div>
+            {currentQuestion?.is_name_question ? (
+              <div className="space-y-4">
+                <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-black uppercase tracking-wider inline-block">
+                  Student Name Check • 0 Points
+                </span>
+                <div className="text-2xl sm:text-4xl font-black text-white flex items-center justify-center gap-3">
+                  <User className="w-8 h-8 text-indigo-400" />
+                  <span>Student Names Recorded</span>
+                </div>
+                {submittedNames.length > 0 ? (
+                  <div className="flex flex-wrap justify-center gap-2 pt-2 max-w-2xl mx-auto">
+                    {submittedNames.map((name, i) => (
+                      <span
+                        key={i}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-200 text-xs font-bold shadow-sm"
+                      >
+                        ✓ {name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Names received from connected students.</p>
+                )}
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Question Answer</h2>
+                <div className="text-3xl sm:text-5xl font-black text-emerald-400 mb-4 flex items-center justify-center gap-3">
+                  <CheckCircle className="w-10 h-10" />
+                  <span>{correctAnswer}</span>
+                </div>
+              </>
+            )}
 
             {/* Auto Advance Banner if in Auto Mode */}
             {progressionMode === 'auto' && autoNextSeconds !== null && (

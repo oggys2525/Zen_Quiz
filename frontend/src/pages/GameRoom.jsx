@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { Sparkles, Trophy, CheckCircle, XCircle, Clock, Volume2, Flame, Award, ArrowLeft, Zap } from 'lucide-react';
+import { Sparkles, Trophy, CheckCircle, XCircle, Clock, Volume2, Flame, Award, ArrowLeft, Zap, User } from 'lucide-react';
 import TimerBar from '../components/TimerBar';
 import ChineseCard from '../components/ChineseCard';
 import { getWebSocketUrl } from '../utils/api';
@@ -71,16 +71,27 @@ export default function GameRoom() {
             setQuestionIndex(data.question_index);
             setTotalQuestions(data.total_questions);
             setProgressionMode(data.progression_mode || 'manual');
+            const isNameQ = Boolean(
+              data.is_name_question ||
+              data.question_type === 'student_name' ||
+              data.meta_info?.question_type === 'student_name' ||
+              data.no_points
+            );
             setCurrentQuestion({
               prompt: data.prompt,
               pinyin: data.pinyin,
-              options: data.options,
+              options: data.options || [],
               game_mode: data.game_mode,
+              question_type: data.question_type,
+              meta_info: data.meta_info,
+              image_url: data.image_url,
+              is_name_question: isNameQ,
+              no_points: Boolean(data.no_points || isNameQ),
             });
             setTimeRemaining(data.time_limit);
             setTotalTime(data.time_limit);
             setSelectedOption(null);
-            setFillAnswer('');
+            setFillAnswer(isNameQ ? (displayName || '') : '');
             setAnswerFeedback(null);
             setAutoNextSeconds(null);
             questionStartTimeRef.current = Date.now();
@@ -237,11 +248,20 @@ export default function GameRoom() {
           {answerFeedback && (
             <div
               className={`p-4 rounded-2xl border text-center animate-pop-in ${
-                answerFeedback.is_correct ? 'flash-correct border-emerald-500 text-emerald-300' : 'flash-incorrect border-rose-500 text-rose-300'
+                answerFeedback.is_name_question || currentQuestion.is_name_question
+                  ? 'border-indigo-500/80 bg-indigo-950/40 text-indigo-200'
+                  : answerFeedback.is_correct
+                  ? 'flash-correct border-emerald-500 text-emerald-300'
+                  : 'flash-incorrect border-rose-500 text-rose-300'
               }`}
             >
               <div className="flex items-center justify-center gap-2 text-base font-extrabold mb-0.5">
-                {answerFeedback.is_correct ? (
+                {answerFeedback.is_name_question || currentQuestion.is_name_question ? (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    <span className="text-white">Name Submitted! (0 pts)</span>
+                  </>
+                ) : answerFeedback.is_correct ? (
                   <>
                     <CheckCircle className="w-5 h-5 text-emerald-400" />
                     <span>Correct! +{answerFeedback.points_gained} pts</span>
@@ -253,9 +273,13 @@ export default function GameRoom() {
                   </>
                 )}
               </div>
-              {!answerFeedback.is_correct && (
+              {answerFeedback.is_name_question || currentQuestion.is_name_question ? (
+                <p className="text-xs text-indigo-300">
+                  Welcome to the quiz! Attendance checked.
+                </p>
+              ) : !answerFeedback.is_correct ? (
                 <p className="text-xs text-slate-300">Answer: <strong className="text-emerald-400">{answerFeedback.correct_answer}</strong></p>
-              )}
+              ) : null}
             </div>
           )}
 
@@ -271,8 +295,51 @@ export default function GameRoom() {
             </div>
           )}
 
-          {/* Fill in the Blank Input or Multiple Choice options */}
-          {(currentQuestion.question_type === 'fill_in_blank' || currentQuestion.meta_info?.question_type === 'fill_in_blank') ? (
+          {/* Student Name Input, Fill in Blank Input, or Multiple Choice options */}
+          {(currentQuestion.is_name_question || currentQuestion.question_type === 'student_name') ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const submittedVal = fillAnswer.trim() || displayName || 'Student';
+                if (selectedOption === null && gameState === 'QUESTION') {
+                  handleChoiceSubmit(submittedVal);
+                }
+              }}
+              className="space-y-3 pt-2"
+            >
+              <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/40 text-left space-y-2.5 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-extrabold uppercase tracking-wider text-indigo-300 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-indigo-400" />
+                    <span>Enter Your Full Name / Nickname</span>
+                  </label>
+                  <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-[10px] font-black text-indigo-300 border border-indigo-500/30">
+                    0 Points (No Points)
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  disabled={selectedOption !== null || gameState !== 'QUESTION'}
+                  value={fillAnswer}
+                  onChange={(e) => setFillAnswer(e.target.value)}
+                  placeholder="Type your name..."
+                  className="w-full bg-slate-900 border-2 border-indigo-500/60 rounded-xl px-4 py-3.5 text-center text-lg text-white font-extrabold placeholder-slate-500 focus:border-indigo-400 focus:outline-none shadow-inner"
+                />
+                <p className="text-[11px] text-slate-400 text-center">
+                  Enter your name so your teacher and classmates can see who is playing.
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={selectedOption !== null || gameState !== 'QUESTION'}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 hover:opacity-95 text-white font-extrabold text-base shadow-xl disabled:opacity-40 cursor-pointer transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <CheckCircle className="w-5 h-5" />
+                <span>Submit My Name</span>
+              </button>
+            </form>
+          ) : (currentQuestion.question_type === 'fill_in_blank' || currentQuestion.meta_info?.question_type === 'fill_in_blank') ? (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
