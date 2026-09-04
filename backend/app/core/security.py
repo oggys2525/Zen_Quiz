@@ -77,4 +77,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+    if not user.is_active or user.status == "suspended":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated or suspended by an administrator.",
+        )
     return user
+
+def get_current_admin(current_user = Depends(get_current_user)):
+    if getattr(current_user, "role", None) != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access required.",
+        )
+    return current_user
+

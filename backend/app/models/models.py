@@ -10,9 +10,16 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     email = Column(String(100), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    role = Column(String(20), default="teacher", nullable=False) # "admin", "teacher", "student"
+    is_active = Column(Integer, default=1, nullable=False) # 1 for True, 0 for False (SQLite friendly)
+    status = Column(String(20), default="active", nullable=False) # "active", "suspended", "pending"
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     quizzes = relationship("Quiz", back_populates="creator", cascade="all, delete-orphan")
+
+    @property
+    def quizzes_count(self) -> int:
+        return len(self.quizzes) if self.quizzes else 0
 
 class Quiz(Base):
     __tablename__ = "quizzes"

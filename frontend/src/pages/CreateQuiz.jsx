@@ -357,8 +357,9 @@ export default function CreateQuiz() {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Default Time Limit for All
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Default Time Limit</span>
                 </label>
                 <button
                   type="button"
@@ -369,16 +370,38 @@ export default function CreateQuiz() {
                   Apply to All Qs
                 </button>
               </div>
-              <select
-                value={defaultTimeLimit}
-                onChange={(e) => setDefaultTimeLimit(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500"
-              >
-                <option value={10}>10 Seconds (Fast)</option>
-                <option value={15}>15 Seconds (Standard)</option>
-                <option value={30}>30 Seconds (Relaxed)</option>
-                <option value={0}>Untimed (No Countdown)</option>
-              </select>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="300"
+                    value={defaultTimeLimit}
+                    onChange={(e) => setDefaultTimeLimit(Math.max(0, parseInt(e.target.value || '0', 10)))}
+                    placeholder="Seconds (0 for untimed)"
+                    className="w-28 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-amber-300 text-center focus:border-rose-500 focus:outline-none"
+                  />
+                  <span className="text-xs font-semibold text-slate-300">
+                    {parseInt(defaultTimeLimit, 10) === 0 ? '♾️ Untimed' : `⏱️ ${defaultTimeLimit}s per question`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[10, 15, 20, 30, 45, 60, 0].map((presetSec) => (
+                    <button
+                      key={presetSec}
+                      type="button"
+                      onClick={() => setDefaultTimeLimit(presetSec)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all ${
+                        parseInt(defaultTimeLimit, 10) === presetSec
+                          ? 'bg-rose-600 text-white border-rose-500 shadow-sm'
+                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                      }`}
+                    >
+                      {presetSec === 0 ? 'Untimed' : `${presetSec}s`}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -641,25 +664,50 @@ export default function CreateQuiz() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-semibold text-slate-400 mb-1">
-                            Question Timer Limit
-                          </label>
-                          <select
-                            value={q.time_limit ?? ''}
-                            onChange={(e) => {
-                              const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-                              handleQuestionChange(qIndex, 'time_limit', val);
-                            }}
-                            className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-amber-300 focus:border-rose-500 font-semibold"
-                          >
-                            <option value="">Default ({defaultTimeLimit > 0 ? `${defaultTimeLimit}s` : 'Untimed'})</option>
-                            <option value={10}>10 Seconds (Fast)</option>
-                            <option value={15}>15 Seconds (Standard)</option>
-                            <option value={20}>20 Seconds</option>
-                            <option value={30}>30 Seconds (Relaxed)</option>
-                            <option value={60}>60 Seconds (1 Min)</option>
-                            <option value={0}>Untimed (No Countdown)</option>
-                          </select>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-semibold text-slate-400">
+                              Question Timer (Seconds)
+                            </label>
+                            {q.time_limit !== null && q.time_limit !== undefined && (
+                              <button
+                                type="button"
+                                onClick={() => handleQuestionChange(qIndex, 'time_limit', null)}
+                                className="text-[10px] text-slate-400 hover:text-amber-400 underline cursor-pointer"
+                              >
+                                Use Default
+                              </button>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            <input
+                              type="number"
+                              min="0"
+                              max="300"
+                              value={q.time_limit !== null && q.time_limit !== undefined ? q.time_limit : ''}
+                              onChange={(e) => {
+                                const val = e.target.value === '' ? null : Math.max(0, parseInt(e.target.value, 10));
+                                handleQuestionChange(qIndex, 'time_limit', val);
+                              }}
+                              placeholder={`Default (${defaultTimeLimit > 0 ? `${defaultTimeLimit}s` : 'Untimed'})`}
+                              className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-sm text-amber-300 font-bold placeholder-slate-600 focus:border-rose-500 focus:outline-none"
+                            />
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {[10, 15, 20, 30, 60, 0].map((presetSec) => (
+                                <button
+                                  key={presetSec}
+                                  type="button"
+                                  onClick={() => handleQuestionChange(qIndex, 'time_limit', presetSec)}
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                                    q.time_limit === presetSec
+                                      ? 'bg-amber-500 text-slate-950 border-amber-400'
+                                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                                  }`}
+                                >
+                                  {presetSec === 0 ? 'Untimed' : `${presetSec}s`}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </div>
 

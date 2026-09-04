@@ -7,6 +7,7 @@ class UserRegister(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=6)
+    role: Optional[str] = "teacher"
 
 class UserLogin(BaseModel):
     username_or_email: str
@@ -21,10 +22,42 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    role: str = "teacher"
+    is_active: bool = True
+    status: str = "active"
     created_at: datetime
+    quizzes_count: Optional[int] = 0
 
     class Config:
         from_attributes = True
+
+# --- Admin Management Schemas ---
+class UserAdminCreate(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    role: str = "teacher" # "admin", "teacher", "student"
+    status: str = "active" # "active", "suspended", "pending"
+    is_active: bool = True
+
+class UserAdminUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+    role: Optional[str] = None # "admin", "teacher", "student"
+    status: Optional[str] = None # "active", "suspended", "pending"
+    is_active: Optional[bool] = None
+
+class UserPasswordReset(BaseModel):
+    new_password: str = Field(..., min_length=6)
+
+class AdminStatsResponse(BaseModel):
+    total_users: int
+    active_users: int
+    suspended_users: int
+    total_quizzes: int
+    total_questions: int
+    role_distribution: dict
+    status_distribution: dict
 
 # --- Question Schemas ---
 class QuestionCreate(BaseModel):

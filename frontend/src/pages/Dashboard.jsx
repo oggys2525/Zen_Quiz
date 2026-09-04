@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { PlusCircle, Play, Trash2, Search, BookOpen, Clock, Sparkles, RefreshCw, Volume2, Layers, Edit3 } from 'lucide-react';
+import { PlusCircle, Play, Trash2, Search, BookOpen, Clock, Sparkles, RefreshCw, Volume2, Layers, Edit3, Shield } from 'lucide-react';
 import { apiRequest, getUser } from '../utils/api';
 
 export default function Dashboard() {
@@ -114,21 +114,32 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+            {user && user.role === 'admin' && (
+              <Link
+                to="/admin"
+                className="px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 hover:text-white border border-rose-500/40 text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm w-full sm:w-auto"
+                title="Go to Administrator Console"
+              >
+                <Shield className="w-4 h-4 text-rose-400 shrink-0" />
+                <span>Admin Console</span>
+              </Link>
+            )}
+
             <button
               onClick={handleSeedQuizzes}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm w-full sm:w-auto cursor-pointer"
               title="Load default sample HSK quizzes"
             >
-              <RefreshCw className="w-4 h-4 text-amber-400" />
+              <RefreshCw className="w-4 h-4 text-amber-400 shrink-0" />
               <span>Restore Default Quizzes</span>
             </button>
 
             <Link
               to="/create-quiz"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:opacity-95 text-white text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-rose-950/40"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-500 hover:opacity-95 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-950/40 w-full sm:w-auto"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4 shrink-0" />
               <span>Create New Quiz</span>
             </Link>
           </div>

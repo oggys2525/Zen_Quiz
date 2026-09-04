@@ -7,6 +7,7 @@ import CreateQuiz from './pages/CreateQuiz';
 import HostRoom from './pages/HostRoom';
 import JoinRoom from './pages/JoinRoom';
 import GameRoom from './pages/GameRoom';
+import AdminDashboard from './pages/AdminDashboard';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/join" element={<JoinRoom />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/create-quiz" element={<CreateQuiz />} />
           <Route path="/edit-quiz/:quizId" element={<CreateQuiz />} />
           <Route path="/host/:quizId" element={<HostRoom />} />

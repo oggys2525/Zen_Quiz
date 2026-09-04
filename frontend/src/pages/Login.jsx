@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Sparkles, User, Mail, Lock, LogIn, UserPlus, AlertCircle, Settings, Server, Check } from 'lucide-react';
+import { Sparkles, User, Mail, Lock, LogIn, UserPlus, AlertCircle, Settings, Server, Check, GraduationCap, BookOpen } from 'lucide-react';
 import { apiRequest, setAuthToken, setUser, getApiBaseUrl, getCustomBackendUrl, setCustomBackendUrl } from '../utils/api';
 
 export default function Login() {
@@ -9,6 +9,7 @@ export default function Login() {
     username: '',
     email: '',
     password: '',
+    role: 'teacher',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ export default function Login() {
     }, 1200);
   };
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -44,10 +46,15 @@ export default function Login() {
           username: formData.username,
           email: formData.email,
           password: formData.password,
+          role: formData.role,
         });
         setAuthToken(res.access_token);
         setUser(res.user);
-        navigate('/dashboard');
+        if (res.user?.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         const res = await apiRequest('/auth/login', 'POST', {
           username_or_email: formData.username,
@@ -55,7 +62,11 @@ export default function Login() {
         });
         setAuthToken(res.access_token);
         setUser(res.user);
-        navigate('/dashboard');
+        if (res.user?.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
       setError(err.message || 'Authentication failed');
@@ -88,10 +99,10 @@ export default function Login() {
             禅
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight">
-            {isRegister ? 'Create Creator Account' : 'Welcome Back'}
+            {isRegister ? 'Create Zen_Quiz Account' : 'Welcome Back'}
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            {isRegister ? 'Sign up to build and host custom Chinese quizzes' : 'Log in to manage your Zen_Quiz classroom sessions'}
+            {isRegister ? 'Sign up to build, host, and participate in Chinese learning quizzes' : 'Log in to manage your Zen_Quiz classroom & quizzes'}
           </p>
         </div>
 
@@ -142,7 +153,7 @@ export default function Login() {
           <button
             type="button"
             onClick={() => { setIsRegister(false); setError(''); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
               !isRegister ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -151,7 +162,7 @@ export default function Login() {
           <button
             type="button"
             onClick={() => { setIsRegister(true); setError(''); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all ${
+            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-all cursor-pointer ${
               isRegister ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -161,7 +172,7 @@ export default function Login() {
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm flex flex-col gap-1.5">
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm flex flex-col gap-1.5 animate-pop-in">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span className="font-medium">{error}</span>
@@ -202,23 +213,57 @@ export default function Login() {
           </div>
 
           {isRegister && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="teacher@school.edu"
-                  className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition-colors"
-                />
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail className="w-5 h-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="teacher@school.edu"
+                    className="w-full bg-slate-900/90 border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 transition-colors"
+                  />
+                </div>
               </div>
-            </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  Account Type
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'teacher' })}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      formData.role === 'teacher'
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Teacher / Creator</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: 'student' })}
+                    className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      formData.role === 'student'
+                        ? 'bg-sky-500/20 border-sky-500/50 text-sky-300'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Student / Learner</span>
+                  </button>
+                </div>
+              </div>
+            </>
           )}
 
           <div>
@@ -250,7 +295,7 @@ export default function Login() {
             ) : isRegister ? (
               <>
                 <UserPlus className="w-4 h-4" />
-                <span>Create Creator Account</span>
+                <span>Create Account</span>
               </>
             ) : (
               <>
@@ -261,7 +306,8 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-slate-800 text-center">
+
+        <div className="mt-4 pt-4 border-t border-slate-800 text-center">
           <p className="text-xs text-slate-400">
             Just want to play a quiz?{' '}
             <Link to="/join" className="text-rose-400 font-semibold hover:underline">

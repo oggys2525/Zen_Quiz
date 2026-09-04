@@ -19,10 +19,16 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     if existing_email:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    # Determine initial role (admin cannot be self-registered publicly)
+    role = payload.role if payload.role in ["teacher", "student"] else "teacher"
+
     user = User(
         username=payload.username,
         email=payload.email,
-        hashed_password=hash_password(payload.password)
+        hashed_password=hash_password(payload.password),
+        role=role,
+        is_active=1,
+        status="active"
     )
     db.add(user)
     db.commit()
@@ -39,6 +45,12 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
 
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid username/email or password")
+
+    if not user.is_active or user.status == "suspended":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account has been deactivated or suspended by an administrator. Please contact support."
+        )
 
     token = create_access_token(data={"sub": str(user.id)})
     return Token(access_token=token, token_type="bearer", user=UserResponse.model_validate(user))

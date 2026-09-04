@@ -165,8 +165,16 @@ async def advance_to_next_question(room: Room):
         q = questions[next_index]
         q_timer = get_effective_time_limit(room, q)
         meta_info = q.get("meta_info") or {}
-        q_type = meta_info.get("question_type", "multiple_choice") if isinstance(meta_info, dict) else "multiple_choice"
-        image_url = meta_info.get("image_url") if isinstance(meta_info, dict) else None
+        if isinstance(meta_info, str):
+            try:
+                meta_info = json.loads(meta_info)
+            except Exception:
+                meta_info = {}
+        elif not isinstance(meta_info, dict):
+            meta_info = {}
+
+        q_type = meta_info.get("question_type", "multiple_choice")
+        image_url = q.get("image_url") or meta_info.get("image_url") or None
 
         payload = {
             "event": "QUESTION_START",
@@ -343,8 +351,16 @@ async def websocket_game_endpoint(websocket: WebSocket, room_code: Optional[str]
                 if room.state == "QUESTION" and 0 <= room.current_question_index < len(room.active_questions):
                     q = room.active_questions[room.current_question_index]
                     meta_info = q.get("meta_info") or {}
-                    q_type = meta_info.get("question_type", "multiple_choice") if isinstance(meta_info, dict) else "multiple_choice"
-                    image_url = meta_info.get("image_url") if isinstance(meta_info, dict) else None
+                    if isinstance(meta_info, str):
+                        try:
+                            meta_info = json.loads(meta_info)
+                        except Exception:
+                            meta_info = {}
+                    elif not isinstance(meta_info, dict):
+                        meta_info = {}
+
+                    q_type = meta_info.get("question_type", "multiple_choice")
+                    image_url = q.get("image_url") or meta_info.get("image_url") or None
                     await send_json_safe(websocket, {
                         "event": "QUESTION_START",
                         "question_index": room.current_question_index,

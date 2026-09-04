@@ -79,11 +79,11 @@ export default function ChineseCard({ prompt, pinyin, gameMode, imageUrl, questi
       {/* Main Prompt Text & Optional Image */}
       <div className="py-2 space-y-3">
         {imageUrl && (
-          <div className="max-w-xs mx-auto overflow-hidden rounded-2xl border-2 border-amber-500/40 shadow-2xl bg-slate-950">
+          <div className="max-w-sm sm:max-w-md mx-auto overflow-hidden rounded-2xl border-2 border-amber-500/40 shadow-2xl bg-slate-950/80 my-3 p-1">
             <img
               src={imageUrl}
               alt={prompt || 'Question image'}
-              className="w-full h-44 object-cover hover:scale-105 transition-transform duration-300"
+              className="w-full max-h-52 sm:max-h-60 object-contain mx-auto rounded-xl hover:scale-102 transition-transform duration-300"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}

@@ -332,6 +332,77 @@ export default function HostRoom() {
                   </p>
                 </div>
               </div>
+
+              {/* Time Limit Custom Input Section */}
+              <div className="pt-3 border-t border-slate-800/80">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
+                  <label className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Countdown Timer Per Question</span>
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setTimerMode('per_question')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        timerMode === 'per_question'
+                          ? 'bg-rose-600 text-white shadow-sm'
+                          : 'bg-slate-950 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Use Question Timers
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTimerMode('override_all')}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        timerMode === 'override_all'
+                          ? 'bg-amber-500 text-slate-950 font-black shadow-sm'
+                          : 'bg-slate-950 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Override All
+                    </button>
+                  </div>
+                </div>
+
+                {timerMode === 'override_all' && (
+                  <div className="p-3 bg-slate-950/80 rounded-xl border border-amber-500/30 space-y-2 animate-pop-in">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="300"
+                        value={timeLimit}
+                        onChange={(e) => setTimeLimit(Math.max(0, parseInt(e.target.value || '0', 10)))}
+                        placeholder="Seconds (0 for untimed)"
+                        className="w-28 bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-sm font-bold text-amber-300 text-center focus:border-amber-400 focus:outline-none"
+                      />
+                      <span className="text-xs font-bold text-slate-300">
+                        {timeLimit === 0 ? '♾️ Untimed (No countdown)' : `⏱️ ${timeLimit} Seconds per Question`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      <span className="text-[10px] font-bold uppercase text-slate-500">Presets:</span>
+                      {[10, 15, 20, 30, 45, 60, 0].map((presetSec) => (
+                        <button
+                          key={presetSec}
+                          type="button"
+                          onClick={() => setTimeLimit(presetSec)}
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all ${
+                            timeLimit === presetSec
+                              ? 'bg-amber-500 text-slate-950 border-amber-400'
+                              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                          }`}
+                        >
+                          {presetSec === 0 ? 'Untimed' : `${presetSec}s`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
@@ -426,6 +497,8 @@ export default function HostRoom() {
             prompt={currentQuestion.prompt}
             pinyin={currentQuestion.pinyin}
             gameMode={currentQuestion.game_mode}
+            imageUrl={currentQuestion.image_url || currentQuestion.meta_info?.image_url}
+            questionType={currentQuestion.question_type || currentQuestion.meta_info?.question_type}
           />
 
           {/* Choices Grid */}
